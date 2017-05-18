@@ -20,6 +20,18 @@ def draw_layout(DISPLAY, layout):
             pygame.draw.rect(DISPLAY, black, (x * C, y*C, C, C))
 
 
+def draw_layout_hd(DISPLAY, layout):
+
+    WHITE = (255, 255, 255)
+    black = (0, 0, 0)
+
+    DISPLAY.fill(WHITE)
+
+    for (x, y), value in np.ndenumerate(layout):
+        if layout[y][x] == 1:
+            pygame.draw.rect(DISPLAY, black, (x, y, 1, 1))
+
+
 def draw_camera(DISPLAY, camera, layout):
     blue = (0, 0, 255)
     red = (255, 0, 0)
@@ -35,19 +47,18 @@ def draw_camera(DISPLAY, camera, layout):
 
         pygame.draw.line(DISPLAY, red, (C * pos[0], C * pos[1]), ray)
         """
-    length, intersection = raycast(rays[50], camera, layout)
-    length = C * length
-    pygame.draw.circle(DISPLAY, red, (int(intersection[1]*C), int(intersection[0]*C)), 5)
-    # length = 1000
-    length = int(length)
-    ray = (C * pos[0] + length * cos(rays[50]),  C * pos[1] + length * sin(rays[50]))
+    for ray in rays:
+        length, intersection = raycast(ray, camera, layout)
 
-    pygame.draw.line(DISPLAY, red, (C * pos[0], C * pos[1]), ray)
+        pygame.draw.circle(DISPLAY, red, (int(intersection[1]), int(intersection[0])), 5)
+        # length = 1000
+        length = int(length)
+        # print(length)
+        ray = (C * pos[0] + length * cos(ray),  C * pos[1] + length * sin(ray))
 
-    pygame.draw.circle(DISPLAY, blue, (int(pos[0]*C), int(pos[1]*C)), r)
+        # pygame.draw.line(DISPLAY, red, (C * pos[0], C * pos[1]), ray)
 
-    # print(camera.rays, angle, end='\r')
-    # print(camera.rays[0], end='\r')
+        pygame.draw.circle(DISPLAY, blue, (int(pos[0]*C), int(pos[1]*C)), r)
 
 
 def raycast(ray, camera, layout):
@@ -61,8 +72,8 @@ def raycast(ray, camera, layout):
     Returns: Distance, [mapX, mapY]
     """
 
-    locationY = camera.position[0]
-    locationX = camera.position[1]
+    locationY = camera.position[0] * C
+    locationX = camera.position[1] * C
 
     # Position in map
     mapX = int(locationX)
@@ -128,7 +139,7 @@ def raycast(ray, camera, layout):
         # Hit something that is not the current map value
         try:
             if layout[mapX][mapY] > 0:
-                print(mapX, mapY, end='\r')
+                # print(mapX, mapY, end='\r')
                 break
         except:
             break
@@ -138,6 +149,20 @@ def raycast(ray, camera, layout):
     distance = sqrt((mapX-locationX)**2 + (mapY-locationY)**2)
 
     return distance, [mapX, mapY]
+
+
+def get_large_layout(layout):
+    rows, columns = layout.shape
+    blank = np.zeros((rows * C, columns * C))
+    # print(blank.shape)
+    for (x, y), value in np.ndenumerate(layout):
+        value = layout[x][y]
+        # print(value)
+        if value > 0:
+            for i in range(C):
+                for j in range(C):
+                    blank[i + x*C][j + y*C] = value
+    return blank
 
 
 def get_input():
@@ -172,6 +197,8 @@ if __name__ == "__main__":
     layout = wrld.map
     camera = wrld.cam
 
+    layout_hd = get_large_layout(layout)
+
     pygame.init()
     size = layout_size * C
     DISPLAY = pygame.display.set_mode((size, size), 0, 32)
@@ -181,7 +208,8 @@ if __name__ == "__main__":
         camera.move(keys)
 
         draw_layout(DISPLAY, layout)
-        draw_camera(DISPLAY, camera, layout)
+        # draw_layout_hd(DISPLAY, layout_hd)
+        draw_camera(DISPLAY, camera, layout_hd)
 
         pygame.display.update()
 
