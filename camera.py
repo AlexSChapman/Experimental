@@ -18,7 +18,7 @@ class player():
         # print(rays)
 
     def move(self, input_keys):
-        speed = .05
+        speed = .1
         if input_keys[0]:
             self.position[0] += speed * math.cos(-self.direction[0])
             self.position[1] += -speed * math.sin(-self.direction[0])
