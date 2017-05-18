@@ -2,14 +2,13 @@ import pygame, sys
 from pygame.locals import *
 import world
 import numpy as np
-import math
 from math import sqrt, sin, cos
 
 
 C = 50
 
 
-def draw_layout(DISPLAY, size_layout, layout):
+def draw_layout(DISPLAY, layout):
 
     WHITE = (255, 255, 255)
     black = (0, 0, 0)
@@ -29,16 +28,19 @@ def draw_camera(DISPLAY, camera, layout):
 
     r = int(C / 8)
     rays = list(camera.rays)
-    """    for ray in rays:
-        length = raycast(ray, camera, layout)
+    """for ray in rays:
+        length = C * raycast(ray, camera, layout)[0]
+        length = int(length)
         ray = (C * pos[0] + length * cos(ray),  C * pos[1] + length * sin(ray))
 
-        pygame.draw.line(DISPLAY, red, (C * pos[0], C * pos[1]), ray)"""
-
-    length = 20 * raycast(rays[0], camera, layout)
-    print(length)
-    length = 1000
-    ray = (C * pos[0] + length * cos(rays[0]),  C * pos[1] + length * sin(rays[0]))
+        pygame.draw.line(DISPLAY, red, (C * pos[0], C * pos[1]), ray)
+        """
+    length, intersection = raycast(rays[50], camera, layout)
+    length = C * length
+    pygame.draw.circle(DISPLAY, red, (int(intersection[1]*C), int(intersection[0]*C)), 5)
+    # length = 1000
+    length = int(length)
+    ray = (C * pos[0] + length * cos(rays[50]),  C * pos[1] + length * sin(rays[50]))
 
     pygame.draw.line(DISPLAY, red, (C * pos[0], C * pos[1]), ray)
 
@@ -59,14 +61,13 @@ def raycast(ray, camera, layout):
     Returns: Distance, [mapX, mapY]
     """
 
-    locationX = camera.position[0]
-    locationY = camera.position[1]
+    locationY = camera.position[0]
+    locationX = camera.position[1]
 
     # Position in map
     mapX = int(locationX)
     mapY = int(locationY)
 
-    # Save the value of the map where the car currently is
     # Ray goes until the map changes values
     try:
         curr_map_value = layout[mapX][mapY]
@@ -80,7 +81,7 @@ def raycast(ray, camera, layout):
 
     dirX = sin(ray_angle)
     dirY = cos(ray_angle)
-
+    # print(str(dirX) + ',' + str(dirY))
     # Set deltaDist based on angle. Ifs are to remove divide by zero.
     # sideDist is incremented by deltaDist every x or y step
     if dirX == 0:
@@ -125,7 +126,11 @@ def raycast(ray, camera, layout):
         if (mapX-locationX)**2 + (mapY-locationY)**2 > 1000**2:
             break
         # Hit something that is not the current map value
-        if layout[mapX][mapY] != curr_map_value:
+        try:
+            if layout[mapX][mapY] > 0:
+                print(mapX, mapY, end='\r')
+                break
+        except:
             break
 
     # Whether to return square of the distance (for performance)
@@ -175,7 +180,7 @@ if __name__ == "__main__":
         keys = get_input()
         camera.move(keys)
 
-        draw_layout(DISPLAY, layout_size, layout)
+        draw_layout(DISPLAY, layout)
         draw_camera(DISPLAY, camera, layout)
 
         pygame.display.update()
