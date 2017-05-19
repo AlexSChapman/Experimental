@@ -30,17 +30,19 @@ def draw_camera(DISPLAY, camera, layout, DRAW=False):
     rays = list(camera.rays)
 
     distances = [0] * len(rays)
+    sides = [0] * len(rays)
     for i, ray in enumerate(rays):
-        length, intersection = raycast(ray, camera, layout)
+        length, intersection, side = raycast(ray, camera, layout)
+        sides[i] = side
         distances[i] = length
 
         ray = (C * pos[0] + int(length) * cos(ray),  C * pos[1] + int(length) * sin(ray))
 
-        # pygame.draw.line(DISPLAY, red, (C * pos[0], C * pos[1]), ray)
+        pygame.draw.line(DISPLAY, red, (C * pos[0], C * pos[1]), ray)
         if DRAW:
             pygame.draw.circle(DISPLAY, red, (int(intersection[1]), int(intersection[0])), 5)
             pygame.draw.circle(DISPLAY, blue, (int(pos[0]*C), int(pos[1]*C)), r)
-    return distances
+    return distances, sides
 
 
 def raycast(ray, camera, layout):
@@ -68,7 +70,7 @@ def raycast(ray, camera, layout):
     except:
         # If off the screen
         # print("Off the screen")
-        curr_map_value = 0
+        pass
 
     ray_angle = ray
 
@@ -130,26 +132,59 @@ def raycast(ray, camera, layout):
 
     distance = sqrt((mapX-locationX)**2 + (mapY-locationY)**2)
 
-    return distance, [mapX, mapY]
+    return distance, [mapX, mapY], side
 
 
-def draw_world(DISPLAY, w, h, camera, distances):
+def draw_world(DISPLAY, w, h, camera, distances, sides, DRAW=False):
     WHITE = (255, 255, 255)
     blue = (0, 200, 255)
     gray = (100, 100, 100)
     dark_gray = (200, 200, 200)
 
-    pygame.draw.rect(DISPLAY, blue, (0, 0, w, h/2))
-    pygame.draw.rect(DISPLAY, gray, (0, h/2, w, h/2))
-    angle = camera.direction[0]
+    if not DRAW:
+        pygame.draw.rect(DISPLAY, blue, (0, 0, w, h/2))
+        pygame.draw.rect(DISPLAY, gray, (0, h/2, w, h/2))
+
     bins = len(distances)
     bin_width = int(w / bins)
-
+    rays = camera.rays
+    points = [[w, h/2]] * (2*(bins + 1))
+    points[0] = [0, h/2]
     for i, distance in enumerate(distances):
-        # z = distance * cos(angle)
-        height = 50 * h / distance
-        print(height)
-        pygame.draw.rect(DISPLAY, dark_gray, (i*bin_width, h/2 - height/2, bin_width, height))
+        height = 25 * h / distance
+        height = int(height)
+        points[i+1] = [i*bin_width, h/2 - height/2]
+        points[2*(bins+1)-(i+1)] = [i*bin_width, h/2 + height/2]
+        if not DRAW:
+            if sides[i] == 1:
+                color = (175, 175, 175)
+            else:
+                color = (200, 200, 200)
+            pygame.draw.rect(DISPLAY, color, (i*bin_width, h/2 - height/2, bin_width, height), 3)
+
+
+def draw_walls(distances, sides):
+    walls = []
+    last_side = -1
+    run = True
+    while run:
+        wall = []
+        for i, side in enumerate(sides):
+            if i > 0:
+                delta_dist = distances[i] - distances[i-1]
+            else:
+                delta_dist = 0
+            if last_side < 0:
+                last_side = side
+            if last_side != side or abs(delta_dist) > 25:
+                last_side = side
+                walls.append(wall)
+                wall = []
+            else:
+                wall.append(side)
+        run = False
+    print(walls)
+
 
 def get_large_layout(layout):
     rows, columns = layout.shape
@@ -202,7 +237,7 @@ if __name__ == "__main__":
 
     pygame.init()
     size = layout_size * C
-    DISPLAY = pygame.display.set_mode((size, size), 0, 32)
+    DISPLAY = pygame.display.set_mode((2*size, size), 0, 32)
 
     while True:
         keys = get_input()
@@ -210,8 +245,9 @@ if __name__ == "__main__":
 
         draw_layout(DISPLAY, layout, DRAW)
         # draw_layout_hd(DISPLAY, layout_hd)
-        distances = draw_camera(DISPLAY, camera, layout_hd, DRAW)
-        draw_world(DISPLAY, size, size, camera, distances)
+        distances, sides = draw_camera(DISPLAY, camera, layout_hd, DRAW)
+        draw_walls(distances, sides)
+        draw_world(DISPLAY, 2*size, size, camera, distances, sides, DRAW)
         pygame.display.update()
 
         clock = pygame.time.Clock()
