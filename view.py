@@ -1,26 +1,49 @@
-import pygame, sys
+import pygame
 from pygame.locals import *
 import world
 import numpy as np
 from math import sqrt, sin, cos
+import time
 
 
 C = 50
+WALL_HEIGHT = 30
 
 
 def draw_layout(DISPLAY, layout, DRAW=False):
+    """
+    Draws the map on the screen when in 2-D mode. Draws the map in lowest
+    resolution for faster refresh time.
+
+    INPUTS:
+    DISPLAY -> Pygame display to be drawn on
+    layout  -> map of base width
+    DRAW    -> Whether or not to draw the map
+    """
     if(DRAW):
         WHITE = (255, 255, 255)
         black = (0, 0, 0)
 
+        # Refreshes screen
         DISPLAY.fill(WHITE)
 
         for (x, y), value in np.ndenumerate(layout):
+            # Only Draws black rectangles
             if layout[y][x] == 1:
                 pygame.draw.rect(DISPLAY, black, (x * C, y*C, C, C))
 
 
 def draw_camera(DISPLAY, camera, layout, DRAW=False):
+    """
+    Draws the player and player's rays in 2D mode, calculates the distances
+    when in 3D mode.
+
+    INPUTS:
+    DISPLAY -> Pygame display to be drawn on
+    camera  -> Player object that holds state variables and can be moved
+    layout  -> map of base width
+    DRAW    -> Whether or not to draw the map
+    """
     blue = (0, 0, 255)
     red = (255, 0, 0)
 
@@ -136,14 +159,29 @@ def raycast(ray, camera, layout):
 
 
 def draw_world(DISPLAY, w, h, camera, distances, sides, DRAW=False):
+    """
+    Most Fundemental Drawing strategy, fills a rectangle for each ray of
+    vision. Precursor to later forms.
+
+    INPUTS:
+    DISPLAY     -> Pygame display to be drawn on
+    w           -> width of the screen in pixels
+    h           -> height of the screen in pixels
+    camera      -> Player object that holds state variables and can be moved
+    distances   -> Array of distances, from left to right, of the player's vision.
+                    This is the actual "3D" component
+    sides       -> Array of equal length to distances which holds which side of the
+                    blocks a player is looking at, used for shading differentiation.
+    DRAW        -> Whether or not to draw the map
+    """
     WHITE = (255, 255, 255)
     blue = (0, 200, 255)
     gray = (100, 100, 100)
-    dark_gray = (200, 200, 200)
+    green = (75, 150, 75)
 
     if not DRAW:
         pygame.draw.rect(DISPLAY, blue, (0, 0, w, h/2))
-        pygame.draw.rect(DISPLAY, gray, (0, h/2, w, h/2))
+        pygame.draw.rect(DISPLAY, green, (0, h/2, w, h/2))
 
     bins = len(distances)
     bin_width = int(w / bins)
@@ -151,7 +189,7 @@ def draw_world(DISPLAY, w, h, camera, distances, sides, DRAW=False):
     points = [[w, h/2]] * (2*(bins + 1))
     points[0] = [0, h/2]
     for i, distance in enumerate(distances):
-        height = 25 * h / distance
+        height = WALL_HEIGHT * h / distance
         height = int(height)
         points[i+1] = [i*bin_width, h/2 - height/2]
         points[2*(bins+1)-(i+1)] = [i*bin_width, h/2 + height/2]
@@ -160,30 +198,175 @@ def draw_world(DISPLAY, w, h, camera, distances, sides, DRAW=False):
                 color = (175, 175, 175)
             else:
                 color = (200, 200, 200)
-            pygame.draw.rect(DISPLAY, color, (i*bin_width, h/2 - height/2, bin_width, height), 3)
+            pygame.draw.rect(DISPLAY, color, (i*bin_width, h/2 - height/2, bin_width, height))
 
 
-def draw_walls(distances, sides):
+def draw_walls(DISPLAY, distances, sides, w, h, DRAW):
+    """
+    Drawing strategy which attempts to interpolate the walls by drawing a
+    polygon with vertices on the corners of the first and last bins of a
+    percieved side. Usually causes slight visual discrepancies (like corners
+    not being aligned, as well as rudely removing fisheye effect.)
+
+    INPUTS:
+    DISPLAY     -> Pygame display to be drawn on
+    distances   -> Array of distances, from left to right, of the player's vision.
+                    This is the actual "3D" component
+    sides       -> Array of equal length to distances which holds which side of the
+                    blocks a player is looking at, used for shading differentiation.
+    w           -> width of the screen in pixels
+    h           -> height of the screen in pixels
+    DRAW        -> Whether or not to draw the map
+    """
+    blue = (0, 200, 255)
+    gray = (150, 150, 150)
+    light_gray = (175, 175, 175)
+    green = (75, 150, 75)
+
+    if not DRAW:
+        pygame.draw.rect(DISPLAY, blue, (0, 0, w, h/2))
+        pygame.draw.rect(DISPLAY, green, (0, h/2, w, h/2))
+
+    bins = len(distances)
+
+    bin_width = int(w / bins)
+
+    walls = find_walls(distances, sides)
+    # print(walls)
+
+    x = 0
+    for i, wall in enumerate(walls):
+        left_x = x
+        left_y = 0
+        right_x = len(wall) * bin_width + x
+        right_y = 0
+
+        x = right_x
+        try:
+            side = wall[0][1]
+            last_distance = wall[len(wall) - 1]
+            first_distance = wall[0]
+
+            # subtract from h/2 for top, add for bottom
+            left_y = int((WALL_HEIGHT * h / first_distance[0])/2)
+            right_y = int((WALL_HEIGHT * h / last_distance[0])/2)
+            """
+            if wall[2] < 40:
+                next_left = int((WALL_HEIGHT * h / walls[i][0][0])/2)
+                right_y = next_left"""
+
+            left_top = [left_x, h/2 - left_y]
+            left_bottom = [left_x, h/2 + left_y]
+
+            right_top = [right_x, h/2 - right_y]
+            right_bottom = [right_x, h/2 + right_y]
+
+            points = [left_top, right_top, right_bottom, left_bottom]
+            if side == 1:
+                color = gray
+            else:
+                color = light_gray
+            pygame.draw.polygon(DISPLAY, color, points)
+        except:
+            pass
+
+
+def smooth_walls(DISPLAY, distances, sides, w, h, DRAW):
+    """
+    Drawing strategy which attempts to interpolate the walls by drawing a
+    polygon with vertices on the corners of EACH bin. In progress 5.23
+
+    INPUTS:
+    DISPLAY     -> Pygame display to be drawn on
+    distances   -> Array of distances, from left to right, of the player's vision.
+                    This is the actual "3D" component
+    sides       -> Array of equal length to distances which holds which side of the
+                    blocks a player is looking at, used for shading differentiation.
+    w           -> width of the screen in pixels
+    h           -> height of the screen in pixels
+    DRAW        -> Whether or not to draw the map
+    """
+    blue = (0, 200, 255)
+    gray = (150, 150, 150)
+    light_gray = (175, 175, 175)
+    green = (75, 150, 75)
+
+    if not DRAW:
+        pygame.draw.rect(DISPLAY, blue, (0, 0, w, h/2))
+        pygame.draw.rect(DISPLAY, green, (0, h/2, w, h/2))
+
+    bins = len(distances)
+
+    bin_width = int(w / bins)
+
+    walls = find_walls(distances, sides)
+    # print(walls)
+
+    x = 0
+    for i, wall in enumerate(walls):
+
+        try:
+            side = wall[0][1]
+            points_T = []
+            points_B = []
+            for q, distance in enumerate(wall):
+                point_T = []
+                point_B = []
+                if q == 0:
+                    point_T.append(x)
+                    point_B.append(x)
+                    x += bin_width
+                else:
+                    x += bin_width
+                    point_T.append(x)
+                    point_B.append(x)
+
+                left_y = int((WALL_HEIGHT * h / distance[0])/2)
+                point_T.append(h/2 - left_y)
+
+                point_B.append(h/2 + left_y)
+
+                points_T.append(point_T)
+                points_B.append(point_B)
+            points_B = points_B[::-1]
+            points = points_T + points_B
+            if side == 1:
+                color = gray
+            else:
+                color = light_gray
+            pygame.draw.polygon(DISPLAY, color, points)
+        except:
+            pass
+
+
+def find_walls(distances, sides):
     walls = []
     last_side = -1
     run = True
     while run:
         wall = []
+        last_distance = 1000
         for i, side in enumerate(sides):
             if i > 0:
                 delta_dist = distances[i] - distances[i-1]
+                last_distance = distances[i-1]
             else:
                 delta_dist = 0
+
             if last_side < 0:
                 last_side = side
-            if last_side != side or abs(delta_dist) > 25:
+
+            if last_side != side or abs(delta_dist) > 30:
+                if len(walls) > 0:
+                    wall.append([last_distance, last_side, abs(delta_dist)])
                 last_side = side
                 walls.append(wall)
                 wall = []
             else:
-                wall.append(side)
+                wall.append([distances[i], side, abs(delta_dist)])
+        walls.append(wall)
         run = False
-    print(walls)
+    return walls
 
 
 def get_large_layout(layout):
@@ -239,16 +422,26 @@ if __name__ == "__main__":
     size = layout_size * C
     DISPLAY = pygame.display.set_mode((2*size, size), 0, 32)
 
+    clock = pygame.time.Clock()
+
     while True:
+        fps = int(clock.get_fps()*100) / 100
         keys = get_input()
         camera.move(keys)
 
         draw_layout(DISPLAY, layout, DRAW)
         # draw_layout_hd(DISPLAY, layout_hd)
         distances, sides = draw_camera(DISPLAY, camera, layout_hd, DRAW)
-        draw_walls(distances, sides)
+        # draw_walls(DISPLAY, distances, sides, 2*size, size, DRAW)
         draw_world(DISPLAY, 2*size, size, camera, distances, sides, DRAW)
+        # smooth_walls(DISPLAY, distances, sides, 2*size, size, DRAW)
+
+        myfont = pygame.font.SysFont("monospace", 30)
+
+        # render text
+        label = myfont.render('fps:' + str(fps), 1, (255, 255, 255))
+        DISPLAY.blit(label, (10, 10))
+
         pygame.display.update()
 
-        clock = pygame.time.Clock()
         clock.tick(60)
