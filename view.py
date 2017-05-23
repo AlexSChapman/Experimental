@@ -10,7 +10,7 @@ C = 50
 WALL_HEIGHT = 30
 
 
-def draw_layout(DISPLAY, layout, DRAW=False):
+def draw_layout(DISPLAY, layout, origin, camera, w, h):
     """
     Draws the map on the screen when in 2-D mode. Draws the map in lowest
     resolution for faster refresh time.
@@ -20,24 +20,25 @@ def draw_layout(DISPLAY, layout, DRAW=False):
     layout  -> map of base width
     DRAW    -> Whether or not to draw the map
     """
-    if(DRAW):
-        WHITE = (255, 255, 255)
-        black = (0, 0, 0)
+    WHITE = (255, 255, 255)
+    black = (0, 0, 0)
+    red = (255, 0, 0)
 
-        # Refreshes screen
-        DISPLAY.fill(WHITE)
+    # Refreshes screen
+    pygame.draw.rect(DISPLAY, WHITE, (origin, 5, C/5*layout.shape[0], C/5*layout.shape[0]))
+    for (x, y), value in np.ndenumerate(layout):
+        # Only Draws black rectangles
+        if layout[y][x] == 1:
+            pygame.draw.rect(DISPLAY, black, (x * C/5 + origin, y*C/5 + 5, C/5, C/5))
+    pygame.draw.circle(DISPLAY, red, (int(camera.position[0]*C/5 + origin), int(camera.position[1]*C/5 + 5)), 5)
+    # pygame.draw.line(DISPLAY, red, (C/5 * camera.position[0] + origin, C/5 * camera.position[1] + 5), camera.rays[0])
+    # pygame.draw.line(DISPLAY, red, (C/5 * camera.position[0] + origin, C/5 * camera.position[1] + 5), camera.rays[1])
 
-        for (x, y), value in np.ndenumerate(layout):
-            # Only Draws black rectangles
-            if layout[y][x] == 1:
-                pygame.draw.rect(DISPLAY, black, (x * C, y*C, C, C))
 
-
-def draw_camera(DISPLAY, camera, layout, DRAW=False):
+def draw_camera(DISPLAY, camera, layout, origin, DRAW=False):
     """
     Draws the player and player's rays in 2D mode, calculates the distances
     when in 3D mode.
-
     INPUTS:
     DISPLAY -> Pygame display to be drawn on
     camera  -> Player object that holds state variables and can be moved
@@ -59,10 +60,14 @@ def draw_camera(DISPLAY, camera, layout, DRAW=False):
         sides[i] = side
         distances[i] = length
 
-        ray = (C * pos[0] + int(length) * cos(ray),  C * pos[1] + int(length) * sin(ray))
-
-        pygame.draw.line(DISPLAY, red, (C * pos[0], C * pos[1]), ray)
+        ray = (C * pos[0] + int(length) * cos(ray) + origin,  C * pos[1] + int(length) * sin(ray) + 5)
+        if i == 0:
+            camera.rays[0] = ray
+        elif i == len(rays) - 1:
+            camera.rays[1] = ray
         if DRAW:
+            pygame.draw.line(DISPLAY, red, (C * pos[0], C * pos[1]), ray)
+
             pygame.draw.circle(DISPLAY, red, (int(intersection[1]), int(intersection[0])), 5)
             pygame.draw.circle(DISPLAY, blue, (int(pos[0]*C), int(pos[1]*C)), r)
     return distances, sides
@@ -369,6 +374,29 @@ def find_walls(distances, sides):
     return walls
 
 
+def draw_HUD(DISPLAY, weapons, weapon_state, iteration, w, h, ratio):
+    index = int(iteration/ratio)
+    if index > len(weapons)-1:
+        index = len(weapons)-1
+    elif index < 0:
+        index = 0
+    i_w, i_h = weapons[0].get_rect().size
+    image_to_use = weapons[index]
+
+    DISPLAY.blit(image_to_use, (int((w-i_w)/2)-30, 440))
+
+
+def load_images():
+    weapon = []
+    weapon.append(pygame.image.load("resources/0.png"))  # Load image
+    weapon.append(pygame.image.load("resources/1.png"))  # Load image
+    weapon.append(pygame.image.load("resources/2.png"))  # Load image
+    weapon.append(pygame.image.load("resources/3.png"))  # Load image
+    weapon.append(pygame.image.load("resources/4.png"))  # Load image
+    weapon.append(pygame.image.load("resources/5.png"))  # Load image
+    return weapon
+
+
 def get_large_layout(layout):
     rows, columns = layout.shape
     blank = np.zeros((rows * C, columns * C))
@@ -383,29 +411,33 @@ def get_large_layout(layout):
     return blank
 
 
-def get_input():
+def get_input(clicked_state):
     """
     Returns a list of user input values (keys, mouse presses, mouse pos).
     """
-    get_events()
+    unused, clicked_state = get_events(clicked_state)
     keys = pygame.key.get_pressed()
     keys_down = [idx for idx, val in enumerate(keys) if val == 1]
     # The event values representing the keys pressed
-    event_keys = (pygame.K_UP, pygame.K_DOWN, pygame.K_RIGHT, pygame.K_LEFT)
+    event_keys = (pygame.K_w, pygame.K_s, pygame.K_d, pygame.K_a)
     # Convert the list of pressed keys to a list of each relevant key's state
     key_states = [int(key in keys_down) for key in event_keys]
-    return key_states
+    return key_states, clicked_state
 
 
-def get_events():
+def get_events(clicked_state):
     """
     Handles getting Pygame events.
     """
     events = pygame.event.get()
     for e in events:
+        if e.type == pygame.MOUSEBUTTONDOWN and e.button == 3:
+            clicked_state = True
+        elif e.type == pygame.MOUSEBUTTONUP and e.button == 3:
+            clicked_state = False
         if e.type == pygame.QUIT:  # If a quit event is received, exit
             pygame.quit()
-    return events
+    return events, clicked_state
 
 
 if __name__ == "__main__":
@@ -420,28 +452,47 @@ if __name__ == "__main__":
 
     pygame.init()
     size = layout_size * C
-    DISPLAY = pygame.display.set_mode((2*size, size), 0, 32)
+    size_factor = 1.6
+    DISPLAY = pygame.display.set_mode((int(size_factor*size), size), 0, 32)
 
     clock = pygame.time.Clock()
 
+    weapons = load_images()
+    weapon_state = False
+    last_weapon_state = False
+    animation_iteration = 0
+    ratio = 1.5
+
+    origin = int(size_factor*size) - (layout.shape[0] * C/5) - 5
+
     while True:
         fps = int(clock.get_fps()*100) / 100
-        keys = get_input()
+        keys, weapon_state = get_input(weapon_state)
+        if weapon_state != last_weapon_state:
+            if weapon_state:
+                animation_iteration = 0
+            else:
+                animation_iteration = (len(weapons)-1) * ratio
+        if weapon_state:
+            animation_iteration += 1
+        else:
+            animation_iteration -= 1
         camera.move(keys)
 
-        draw_layout(DISPLAY, layout, DRAW)
-        # draw_layout_hd(DISPLAY, layout_hd)
-        distances, sides = draw_camera(DISPLAY, camera, layout_hd, DRAW)
-        # draw_walls(DISPLAY, distances, sides, 2*size, size, DRAW)
-        draw_world(DISPLAY, 2*size, size, camera, distances, sides, DRAW)
-        # smooth_walls(DISPLAY, distances, sides, 2*size, size, DRAW)
+        distances, sides = draw_camera(DISPLAY, camera, layout_hd, origin, False)
 
-        myfont = pygame.font.SysFont("monospace", 30)
+        draw_world(DISPLAY, int(size_factor*size), size, camera, distances, sides, DRAW)
+        draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio)
+        draw_layout(DISPLAY, layout, origin, camera, int(size_factor*size), size)
+
+
 
         # render text
+        myfont = pygame.font.SysFont("monospace", 35)
+
         label = myfont.render('fps:' + str(fps), 1, (255, 255, 255))
         DISPLAY.blit(label, (10, 10))
 
-        pygame.display.update()
-
+        last_weapon_state = weapon_state
         clock.tick(60)
+        pygame.display.update()

@@ -9,6 +9,7 @@ class player():
         self.direction = direction
         self.FOV = FOV
         self.update_rays()
+        self.rays = [0, 0]
         print(position)
 
     def __str__(self):
