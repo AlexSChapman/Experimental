@@ -465,13 +465,23 @@ if __name__ == "__main__":
     animation_iteration = 0
     ratio = 1.5
 
+    paused = 0
+
     origin = int(size_factor*size) - ((layout.shape[0] * C/5) + 5)
 
     while True:
         fps = int(clock.get_fps()*100) / 100
         keys, weapon_state = get_input(weapon_state)
 
-        paused = keys[4]
+        print(paused, keys[4])
+        if paused != keys[4] and paused == 0:
+            paused = keys[4]
+
+        if keys[4] == 0 and paused == 1:
+            paused = 2
+
+        if paused == 2 and keys[4] == 1:
+            paused = 0
 
         if not paused:
             dx, dy = pygame.mouse.get_rel()
@@ -502,8 +512,21 @@ if __name__ == "__main__":
             label = myfont.render('fps:' + str(fps), 1, (255, 255, 255))
             DISPLAY.blit(label, (10, 10))
         else:
+
+            draw_world(DISPLAY, int(size_factor*size), size, camera, distances, sides, DRAW)
+            draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio)
+            draw_layout(DISPLAY, layout, origin, camera, int(size_factor*size), size)
+
             pygame.event.set_grab(False)
             pygame.mouse.set_visible(True)
+            myfont = pygame.font.SysFont("monospace", 75)
+
+            s = pygame.Surface((int(size_factor*size) - 20, size - 20))  # the size of your rect
+            s.set_alpha(175)                # alpha level
+            s.fill((100, 100, 100))           # this fills the entire surface
+            DISPLAY.blit(s, (10, 10))    # (0,0) are the top-left coordinates
+            label = myfont.render('PAUSED.', 1, (255, 255, 0))
+            DISPLAY.blit(label, (10, 10))
 
         last_weapon_state = weapon_state
 
