@@ -21,7 +21,7 @@ class player():
         self.rays = [i*step+start for i in range(resolution)]
         # print(rays)
 
-    def move(self, input_keys):
+    def move(self, input_keys, dx):
         new_time = time.clock()
         delta_time = new_time - self.OLD_TIME
         self.OLD_TIME = new_time
@@ -32,9 +32,9 @@ class player():
         if input_keys[1]:
             self.position[0] -= speed * math.cos(-self.direction[0])
             self.position[1] -= -speed * math.sin(-self.direction[0])
-        if input_keys[2]:
-            self.direction[0] += speed/2
-        if input_keys[3]:
-            self.direction[0] -= speed/2
-
+        # if input_keys[2]:
+        #     self.direction[0] += speed/2
+        # if input_keys[3]:
+        #     self.direction[0] -= speed/2
+        self.direction[0] += dx / 200
         self.update_rays()

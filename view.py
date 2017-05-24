@@ -474,6 +474,7 @@ if __name__ == "__main__":
         paused = keys[4]
 
         if not paused:
+            dx, dy = pygame.mouse.get_rel()
             pygame.event.set_grab(True)
             pygame.mouse.set_visible(False)
 
@@ -487,7 +488,7 @@ if __name__ == "__main__":
             else:
                 animation_iteration -= 1
 
-            camera.move(keys)
+            camera.move(keys, dx)
 
             distances, sides = draw_camera(DISPLAY, camera, layout_hd, origin, False)
 
@@ -505,5 +506,6 @@ if __name__ == "__main__":
             pygame.mouse.set_visible(True)
 
         last_weapon_state = weapon_state
-        clock.tick(60)
+
         pygame.display.update()
+        clock.tick(60)
