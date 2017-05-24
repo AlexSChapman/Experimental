@@ -31,6 +31,7 @@ def draw_layout(DISPLAY, layout, origin, camera, w, h):
         if layout[y][x] == 1:
             pygame.draw.rect(DISPLAY, black, (x * C/5 + origin, y*C/5 + 5, C/5, C/5))
     pygame.draw.circle(DISPLAY, red, (int(camera.position[0]*C/5 + origin), int(camera.position[1]*C/5 + 5)), 5)
+
     # pygame.draw.line(DISPLAY, red, (C/5 * camera.position[0] + origin, C/5 * camera.position[1] + 5), camera.rays[0])
     # pygame.draw.line(DISPLAY, red, (C/5 * camera.position[0] + origin, C/5 * camera.position[1] + 5), camera.rays[1])
 
@@ -419,7 +420,7 @@ def get_input(clicked_state):
     keys = pygame.key.get_pressed()
     keys_down = [idx for idx, val in enumerate(keys) if val == 1]
     # The event values representing the keys pressed
-    event_keys = (pygame.K_w, pygame.K_s, pygame.K_d, pygame.K_a)
+    event_keys = (pygame.K_w, pygame.K_s, pygame.K_d, pygame.K_a, pygame.K_ESCAPE)
     # Convert the list of pressed keys to a list of each relevant key's state
     key_states = [int(key in keys_down) for key in event_keys]
     return key_states, clicked_state
@@ -435,6 +436,7 @@ def get_events(clicked_state):
             clicked_state = True
         elif e.type == pygame.MOUSEBUTTONUP and e.button == 3:
             clicked_state = False
+
         if e.type == pygame.QUIT:  # If a quit event is received, exit
             pygame.quit()
     return events, clicked_state
@@ -463,35 +465,44 @@ if __name__ == "__main__":
     animation_iteration = 0
     ratio = 1.5
 
-    origin = int(size_factor*size) - (layout.shape[0] * C/5) - 5
+    origin = int(size_factor*size) - ((layout.shape[0] * C/5) + 5)
 
     while True:
         fps = int(clock.get_fps()*100) / 100
         keys, weapon_state = get_input(weapon_state)
-        if weapon_state != last_weapon_state:
+
+        paused = keys[4]
+
+        if not paused:
+            pygame.event.set_grab(True)
+            pygame.mouse.set_visible(False)
+
+            if weapon_state != last_weapon_state:
+                if weapon_state:
+                    animation_iteration = 0
+                else:
+                    animation_iteration = (len(weapons)-1) * ratio
             if weapon_state:
-                animation_iteration = 0
+                animation_iteration += 1
             else:
-                animation_iteration = (len(weapons)-1) * ratio
-        if weapon_state:
-            animation_iteration += 1
+                animation_iteration -= 1
+
+            camera.move(keys)
+
+            distances, sides = draw_camera(DISPLAY, camera, layout_hd, origin, False)
+
+            draw_world(DISPLAY, int(size_factor*size), size, camera, distances, sides, DRAW)
+            draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio)
+            draw_layout(DISPLAY, layout, origin, camera, int(size_factor*size), size)
+
+            # render text
+            myfont = pygame.font.SysFont("monospace", 35)
+
+            label = myfont.render('fps:' + str(fps), 1, (255, 255, 255))
+            DISPLAY.blit(label, (10, 10))
         else:
-            animation_iteration -= 1
-        camera.move(keys)
-
-        distances, sides = draw_camera(DISPLAY, camera, layout_hd, origin, False)
-
-        draw_world(DISPLAY, int(size_factor*size), size, camera, distances, sides, DRAW)
-        draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio)
-        draw_layout(DISPLAY, layout, origin, camera, int(size_factor*size), size)
-
-
-
-        # render text
-        myfont = pygame.font.SysFont("monospace", 35)
-
-        label = myfont.render('fps:' + str(fps), 1, (255, 255, 255))
-        DISPLAY.blit(label, (10, 10))
+            pygame.event.set_grab(False)
+            pygame.mouse.set_visible(True)
 
         last_weapon_state = weapon_state
         clock.tick(60)
