@@ -1,6 +1,7 @@
 import pygame
 from pygame.locals import *
 import world
+import physical_items
 import numpy as np
 from math import sqrt, sin, cos
 import time
@@ -412,21 +413,21 @@ def get_large_layout(layout):
     return blank
 
 
-def get_input(clicked_state):
+def get_input(clicked_state, shot_state):
     """
     Returns a list of user input values (keys, mouse presses, mouse pos).
     """
-    unused, clicked_state = get_events(clicked_state)
+    unused, clicked_state, shot_state = get_events(clicked_state, shot_state)
     keys = pygame.key.get_pressed()
     keys_down = [idx for idx, val in enumerate(keys) if val == 1]
     # The event values representing the keys pressed
     event_keys = (pygame.K_w, pygame.K_s, pygame.K_d, pygame.K_a, pygame.K_ESCAPE)
     # Convert the list of pressed keys to a list of each relevant key's state
     key_states = [int(key in keys_down) for key in event_keys]
-    return key_states, clicked_state
+    return key_states, clicked_state, shot_state
 
 
-def get_events(clicked_state):
+def get_events(clicked_state, shot_state):
     """
     Handles getting Pygame events.
     """
@@ -437,9 +438,14 @@ def get_events(clicked_state):
         elif e.type == pygame.MOUSEBUTTONUP and e.button == 3:
             clicked_state = False
 
+        if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+            shot_state = True
+        elif e.type == pygame.MOUSEBUTTONUP and e.button == 1:
+            shot_state = False
+
         if e.type == pygame.QUIT:  # If a quit event is received, exit
             pygame.quit()
-    return events, clicked_state
+    return events, clicked_state, shot_state
 
 
 if __name__ == "__main__":
@@ -465,23 +471,37 @@ if __name__ == "__main__":
     animation_iteration = 0
     ratio = 1.5
 
+    shot_state = False
+    last_shot_state = False
+
     paused = 0
+    ready_to_change = 1
 
     origin = int(size_factor*size) - ((layout.shape[0] * C/5) + 5)
 
+    shots = []
+
     while True:
         fps = int(clock.get_fps()*100) / 100
-        keys, weapon_state = get_input(weapon_state)
+        keys, weapon_state, shot_state = get_input(weapon_state, shot_state)
 
-        print(paused, keys[4])
-        if paused != keys[4] and paused == 0:
+        if keys[4] == 1 and paused == 0 and ready_to_change == 1:
             paused = keys[4]
+            ready_to_change = 0
 
-        if keys[4] == 0 and paused == 1:
-            paused = 2
+        if keys[4] == 0:
+            ready_to_change = 1
 
-        if paused == 2 and keys[4] == 1:
+        if paused == 1 and keys[4] == 1 and ready_to_change == 1:
             paused = 0
+            ready_to_change = 0
+
+        if keys[3] == 1:
+            pygame.event.set_grab(False)
+            pygame.mouse.set_visible(True)
+
+        if shot_state != last_shot_state and shot_state and weapon_state:
+            shots.append(physical_items.projectile(camera.position, camera.direction, 0, 0))
 
         if not paused:
             dx, dy = pygame.mouse.get_rel()
@@ -506,6 +526,10 @@ if __name__ == "__main__":
             draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio)
             draw_layout(DISPLAY, layout, origin, camera, int(size_factor*size), size)
 
+            for i, shot in enumerate(shots):
+                shot.update_physics()
+                if shot.draw(DISPLAY, camera, int(size_factor*size), size, C) > 10:
+                    del shots[i]
             # render text
             myfont = pygame.font.SysFont("monospace", 35)
 
@@ -529,6 +553,7 @@ if __name__ == "__main__":
             DISPLAY.blit(label, (10, 10))
 
         last_weapon_state = weapon_state
+        last_shot_state = shot_state
 
         pygame.display.update()
         clock.tick(60)
