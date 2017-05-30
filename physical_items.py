@@ -12,10 +12,12 @@ class projectile():
         self.position[1] = position[1] + math.sin(direction[0]) * .5
         self.position[2] = position[2]
         self.direction = list(direction)
-        self.velocity = velocity
+        self.velocity = []
+        self.velocity.append(velocity)
+        self.velocity.append(0)
         self.type = ammo_type
 
-        self.acceleration = -9.81
+        self.acceleration = .05
         self.time = time.clock()
 
         if self.type == 0:
@@ -23,10 +25,9 @@ class projectile():
         else:
             self.image = pygame.image.load("resources/projectiles/1.png")  # Load image
         print(self)
-        print('Camera_position', 'camera_direction', 'xy_angle', 'to_draw')
 
     def __str__(self):
-        to_return = str(self.position) + ', ' + str(self.direction) + ', ' + str(self.velocity)
+        to_return = str(round(2, self.position)) + ', ' + str(round(2, self.direction)) + ', ' + str(round(2, self.velocity))
         return(to_return)
 
     def update_physics(self):
@@ -34,12 +35,15 @@ class projectile():
         delta_time = new_time - self.time
         self.time = new_time
 
-        vel_x = math.cos(self.direction[0]) * self.velocity
-        vel_y = math.sin(self.direction[0]) * self.velocity
+        vel_x = math.cos(self.direction[0]) * self.velocity[0]
+        vel_y = math.sin(self.direction[0]) * self.velocity[0]
 
         self.position[0] += vel_x * delta_time
         self.position[1] += vel_y * delta_time
-        # self.position[2] += velocity[2] * delta_time + .5 * self.acceleration * (delta_time**2)
+        self.position[2] += self.velocity[1] * delta_time + .5 * self.acceleration * (delta_time**2)
+
+        self.velocity[1] += self.acceleration * delta_time
+        print(self.velocity[1])
 
     def draw(self, DISPLAY, camera, w, h, C):
         differences = list(map(operator.sub, self.position, camera.position))
@@ -77,17 +81,17 @@ class projectile():
                 angle_xy = math.pi - math.atan(differences[1] / differences[0])
         angle_xy = math.pi * 2 - angle_xy
         # angle_xy = round(2, angle_xy - camera.direction[0])
-        angle_difference = angle_xy - camera.direction[0]
+        angle_difference_xy = angle_xy - camera.direction[0]
+        angle_difference_z = math.atan(self.position[2]/distance)
         H_FOV = camera.FOV / 2
 
-        if abs(angle_difference) < H_FOV:
-            x_drawn = ((angle_difference / H_FOV) + 1) * (w/2)
-            y_drawn = h/2
+        if abs(angle_difference_xy) < H_FOV:
+            x_drawn = ((angle_difference_xy / H_FOV) + 1) * (w/2)
+            y_drawn = ((angle_difference_z / H_FOV) + 1) * (h/2)
             r = 10 / ((distance/5) + 1)
             pygame.draw.rect(DISPLAY, (255, 255, 0), (int(x_drawn - r/2), int(y_drawn - r/2), r, r))
 
-        # print(round(2, camera.position), round(2, camera.direction[0]), xy_angle, to_draw, end='\r')
-        print(round(2, self.position), round(2, camera.position), round(2, self.direction), round(2, camera.direction[0]), round(2, angle_difference), to_draw, end='\r')
+        # print(round(2, self.position), round(2, camera.position), round(2, self.direction), round(2, camera.direction[0]), round(2, angle_difference_xy), to_draw, end='\r')
 
         # pygame.draw.rect(DISPLAY, (255, 255, 0), (int(x_drawn_pos), int(y_drawn_pos), 5, 5))
         return distance
