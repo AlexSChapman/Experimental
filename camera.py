@@ -21,6 +21,9 @@ class player():
         self.rays = [i*step+start for i in range(resolution)]
         # print(rays)
 
+    def limit_rotation(self):
+        self.direction[0] = self.direction[0] % (math.pi * 2)
+
     def move(self, input_keys, dx):
         new_time = time.clock()
         delta_time = new_time - self.OLD_TIME
@@ -38,3 +41,4 @@ class player():
         #     self.direction[0] -= speed/2
         self.direction[0] += dx / 200
         self.update_rays()
+        self.limit_rotation()

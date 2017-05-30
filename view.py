@@ -501,7 +501,7 @@ if __name__ == "__main__":
             pygame.mouse.set_visible(True)
 
         if shot_state != last_shot_state and shot_state and weapon_state:
-            shots.append(physical_items.projectile(camera.position, camera.direction, 0, 0))
+            shots.append(physical_items.projectile(camera.position, camera.direction, 1, 0))
 
         if not paused:
             dx, dy = pygame.mouse.get_rel()
@@ -526,10 +526,14 @@ if __name__ == "__main__":
             draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio)
             draw_layout(DISPLAY, layout, origin, camera, int(size_factor*size), size)
 
+            # if len(shots) > 1:
+            #     del shots[0]
+
             for i, shot in enumerate(shots):
                 shot.update_physics()
-                if shot.draw(DISPLAY, camera, int(size_factor*size), size, C) > 10:
-                    del shots[i]
+                shot.draw(DISPLAY, camera, int(size_factor*size), size, C)
+                # if shot.draw(DISPLAY, camera, int(size_factor*size), size, C) > 10:
+                #    del shots[i]
             # render text
             myfont = pygame.font.SysFont("monospace", 35)
 
