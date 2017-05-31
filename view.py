@@ -224,26 +224,57 @@ def draw_world_MkII(DISPLAY, camera, w, h, layout):
     w_h = 1
     for (x, y), value in np.ndenumerate(layout):
         if value != 0:
-            points.append([y, x, w_h/2])
-            points.append([y, x, -w_h/2])
+            highest = []
 
-            points.append([y+1, x, w_h/2])
-            points.append([y+1, x, -w_h/2])
+            jig = [[y, x, w_h/2], [y, x, -w_h/2]]
+            # points.append([y, x, w_h/2])
+            # points.append([y, x, -w_h/2])
+            highest.append(jig)
 
-            points.append([y, x+1, w_h/2])
-            points.append([y, x+1, -w_h/2])
+            # points.append([y+1, x, w_h/2])
+            # points.append([y+1, x, -w_h/2])
+            jig = [[y+1, x, w_h/2], [y+1, x, -w_h/2]]
+            highest.append(jig)
 
-            points.append([y+1, x+1, w_h/2])
-            points.append([y+1, x+1, -w_h/2])
-    positions = []
-    for point in points:
-        result = draw(point, DISPLAY, camera, w, h)
-        if result != -1:
-            positions.append(result)
+            # points.append([y, x+1, w_h/2])
+            # points.append([y, x+1, -w_h/2])
+            jig = [[y, x+1, w_h/2], [y, x+1, -w_h/2]]
+            highest.append(jig)
+
+            # points.append([y+1, x+1, w_h/2])
+            # points.append([y+1, x+1, -w_h/2])
+            jig = [[y+1, x+1, w_h/2], [y+1, x+1, -w_h/2]]
+            highest.append(jig)
+
+            points.append(highest)
+    for cube in points:
+        uprights = []
+        for vertical in cube:
+            holder = []
+            for point in vertical:
+                holder.append(draw(point, DISPLAY, camera, w, h))
+            uprights.append(holder)
+        # North -> 0
+        # East  -> 1
+        # South -> 2
+        # West  -> 3
+        faces = []
+        faces.append([uprights[0], uprights[1]])
+        faces.append([uprights[1], uprights[3]])
+        faces.append([uprights[3], uprights[2]])
+        faces.append([uprights[2], uprights[0]])
+        for face in faces:
+            for upright_pair in face:
+                for upright in upright_pair:
+                    if upright is not None:
+                        print(upright)
+
+        # print(faces)
+
     DISPLAY.fill((20, 20, 20))
 
-    for position in positions:
-        pygame.draw.circle(DISPLAY, (255, 255, 0), (position[0], position[1]), position[2])
+    # for position in positions:
+        # pygame.draw.circle(DISPLAY, (255, 255, 0), (position[0], position[1]), position[2])
 
 
 def draw(position, DISPLAY, camera, w, h):
@@ -283,7 +314,7 @@ def draw(position, DISPLAY, camera, w, h):
         r = int(5 / ((distance/5) + 1))
         return [int(x_drawn), int(y_drawn), r]
     else:
-        return -1
+        return None
         # image = pygame.transform.scale(image, (r, r))
         # pygame.draw.circle(DISPLAY, (255, 255, 0), (int(x_drawn), int(y_drawn)), r)
         # DISPLAY.blit(image, (int(x_drawn - r/2), int(y_drawn - r/2)))
