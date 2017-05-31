@@ -518,7 +518,7 @@ if __name__ == "__main__":
             else:
                 animation_iteration -= 1
 
-            camera.move(keys, dx)
+            camera.move(keys, dx, layout)
 
             distances, sides = draw_camera(DISPLAY, camera, layout_hd, origin, False)
 
@@ -530,8 +530,9 @@ if __name__ == "__main__":
             #     del shots[0]
 
             for i, shot in enumerate(shots):
-                shot.update_physics()
-                shot.draw(DISPLAY, camera, int(size_factor*size), size, C)
+                distance, pos = shot.draw(DISPLAY, camera, int(size_factor*size), size, C)
+                if pos[2] > .7:
+                    del shots[i]
                 # if shot.draw(DISPLAY, camera, int(size_factor*size), size, C) > 10:
                 #    del shots[i]
             # render text

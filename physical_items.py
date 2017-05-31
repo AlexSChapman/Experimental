@@ -43,14 +43,15 @@ class projectile():
         self.position[2] += self.velocity[1] * delta_time + .5 * self.acceleration * (delta_time**2)
 
         self.velocity[1] += self.acceleration * delta_time
-        print(self.velocity[1])
+        # print(self.position[2])
 
     def draw(self, DISPLAY, camera, w, h, C):
+        self.update_physics()
         differences = list(map(operator.sub, self.position, camera.position))
-        to_draw = []
+        # to_draw = []
         distance = 0
         for i, dif in enumerate(differences):
-            to_draw.append(round(2, dif))
+            # to_draw.append(round(2, dif))
 
             # dif = dif * C
             distance += dif**2
@@ -94,7 +95,7 @@ class projectile():
         # print(round(2, self.position), round(2, camera.position), round(2, self.direction), round(2, camera.direction[0]), round(2, angle_difference_xy), to_draw, end='\r')
 
         # pygame.draw.rect(DISPLAY, (255, 255, 0), (int(x_drawn_pos), int(y_drawn_pos), 5, 5))
-        return distance
+        return distance, self.position
 
 
 def round(number_of_zeros, num):
