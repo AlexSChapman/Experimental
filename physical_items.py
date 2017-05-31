@@ -6,25 +6,29 @@ import math
 
 class projectile():
     def __init__(self, position, direction, velocity, ammo_type):
-        print('projectile_created')
+        # print('projectile_created')
         self.position = [0, 0, 0]
         self.position[0] = position[0] + math.cos(direction[0]) * .5
         self.position[1] = position[1] + math.sin(direction[0]) * .5
         self.position[2] = position[2]
+
         self.direction = list(direction)
+
         self.velocity = []
         self.velocity.append(velocity)
         self.velocity.append(0)
+
         self.type = ammo_type
 
-        self.acceleration = .05
+        self.acceleration = 0.05
         self.time = time.clock()
 
         if self.type == 0:
             self.image = pygame.image.load("resources/projectiles/0.png")  # Load image
+            self.image = pygame.transform.scale(self.image, (30, 30))
         else:
             self.image = pygame.image.load("resources/projectiles/1.png")  # Load image
-        print(self)
+        # print(self)
 
     def __str__(self):
         to_return = str(round(2, self.position)) + ', ' + str(round(2, self.direction)) + ', ' + str(round(2, self.velocity))
@@ -89,12 +93,15 @@ class projectile():
         if abs(angle_difference_xy) < H_FOV:
             x_drawn = ((angle_difference_xy / H_FOV) + 1) * (w/2)
             y_drawn = ((angle_difference_z / H_FOV) + 1) * (h/2)
-            r = 10 / ((distance/5) + 1)
-            pygame.draw.rect(DISPLAY, (255, 255, 0), (int(x_drawn - r/2), int(y_drawn - r/2), r, r))
+            r = int(30 / ((distance/5) + 1))
+            # self.image = pygame.transform.scale(self.image, (r, r))
+            pygame.draw.circle(DISPLAY, (255, 255, 0), (int(x_drawn), int(y_drawn)), r)
+            # DISPLAY.blit(self.image, (int(x_drawn - r/2), int(y_drawn - r/2)))
 
         # print(round(2, self.position), round(2, camera.position), round(2, self.direction), round(2, camera.direction[0]), round(2, angle_difference_xy), to_draw, end='\r')
 
         # pygame.draw.rect(DISPLAY, (255, 255, 0), (int(x_drawn_pos), int(y_drawn_pos), 5, 5))
+        print(round(2, camera.position), end='\r')
         return distance, self.position
 
 

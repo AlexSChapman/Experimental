@@ -3,9 +3,8 @@ from pygame.locals import *
 import world
 import physical_items
 import numpy as np
-from math import sqrt, sin, cos
-import time
-
+from math import sqrt, sin, cos, pi, atan
+import operator
 
 C = 50
 WALL_HEIGHT = 30
@@ -151,12 +150,18 @@ def raycast(ray, camera, layout):
         if (mapX-locationX)**2 + (mapY-locationY)**2 > 1000**2:
             break
         # Hit something that is not the current map value
+        if mapX < 0 or mapX > 20 * C:
+            side = 2
+            break
+        if mapY < 0 or mapY > 20 * C:
+            side = 3
+            break
         try:
             if layout[mapX][mapY] > 0:
                 # print(mapX, mapY, end='\r')
                 break
         except:
-            break
+            pass
 
     # Whether to return square of the distance (for performance)
 
@@ -185,6 +190,8 @@ def draw_world(DISPLAY, w, h, camera, distances, sides, DRAW=False):
     blue = (0, 200, 255)
     gray = (100, 100, 100)
     green = (75, 150, 75)
+    orange = (200, 150, 0)
+    dark_orange = (175, 125, 0)
 
     if not DRAW:
         pygame.draw.rect(DISPLAY, blue, (0, 0, w, h/2))
@@ -203,9 +210,83 @@ def draw_world(DISPLAY, w, h, camera, distances, sides, DRAW=False):
         if not DRAW:
             if sides[i] == 1:
                 color = (175, 175, 175)
-            else:
+            elif sides[i] == 0:
                 color = (200, 200, 200)
+            elif sides[i] == 2:
+                color = orange
+            elif sides[i] == 3:
+                color = dark_orange
             pygame.draw.rect(DISPLAY, color, (i*bin_width, h/2 - height/2, bin_width, height))
+
+
+def draw_world_MkII(DISPLAY, camera, w, h, layout):
+    points = []
+    w_h = 1
+    for (x, y), value in np.ndenumerate(layout):
+        if value != 0:
+            points.append([y, x, w_h/2])
+            points.append([y, x, -w_h/2])
+
+            points.append([y+1, x, w_h/2])
+            points.append([y+1, x, -w_h/2])
+
+            points.append([y, x+1, w_h/2])
+            points.append([y, x+1, -w_h/2])
+
+            points.append([y+1, x+1, w_h/2])
+            points.append([y+1, x+1, -w_h/2])
+    positions = []
+    for point in points:
+        result = draw(point, DISPLAY, camera, w, h)
+        if result != -1:
+            positions.append(result)
+    DISPLAY.fill((20, 20, 20))
+
+    for position in positions:
+        pygame.draw.circle(DISPLAY, (255, 255, 0), (position[0], position[1]), position[2])
+
+
+def draw(position, DISPLAY, camera, w, h):
+    differences = list(map(operator.sub, position, camera.position))
+    # to_draw = []
+    distance = 0
+    for i, dif in enumerate(differences):
+        distance += dif**2
+        if dif == 0:
+            differences[i] = .0001
+    distance = distance**.5
+
+    if differences[0] > 0:
+        if differences[1] > 0:
+            # IV: atan is positive in this quad as differences[1] is positive here
+            angle_xy = (pi * 2) - atan(differences[1] / differences[0])
+        else:
+            # I: atan is negative in this quad, as differences[1] is neg here
+            angle_xy = -1 * atan(differences[1] / differences[0])
+    else:
+        if differences[1] > 0:
+            # III: atan is negative here, and thus needs to be inverted to add onto pi
+            angle_xy = pi - atan(differences[1] / differences[0])
+        else:
+            # II: atan is positive here
+            angle_xy = pi - atan(differences[1] / differences[0])
+    angle_xy = pi * 2 - angle_xy
+    # angle_xy = round(2, angle_xy - camera.direction[0])
+    angle_difference_xy = angle_xy - camera.direction[0]
+    distance += .001
+    angle_difference_z = atan(position[2]/distance)
+    H_FOV = camera.FOV / 2
+
+    if abs(angle_difference_xy) < H_FOV:
+        x_drawn = ((angle_difference_xy / H_FOV) + 1) * (w/2)
+        y_drawn = ((angle_difference_z / H_FOV) + 1) * (h/2)
+        r = int(5 / ((distance/5) + 1))
+        return [int(x_drawn), int(y_drawn), r]
+    else:
+        return -1
+        # image = pygame.transform.scale(image, (r, r))
+        # pygame.draw.circle(DISPLAY, (255, 255, 0), (int(x_drawn), int(y_drawn)), r)
+        # DISPLAY.blit(image, (int(x_drawn - r/2), int(y_drawn - r/2)))
 
 
 def draw_walls(DISPLAY, distances, sides, w, h, DRAW):
@@ -448,6 +529,19 @@ def get_events(clicked_state, shot_state):
     return events, clicked_state, shot_state
 
 
+def collide(shots, layout):
+    collisions = []
+    for i, shot in enumerate(shots):
+        try:
+            if layout[int(shot.position[1])][int(shot.position[0])] != 0:
+                del shots[i]
+                collisions.append(shot.position)
+        except:
+            del shots[i]
+            collisions.append(shot.position)
+    return collisions
+
+
 if __name__ == "__main__":
     DRAW = False
     layout_size = 20
@@ -457,7 +551,7 @@ if __name__ == "__main__":
     camera = wrld.cam
 
     layout_hd = get_large_layout(layout)
-
+    print(layout.shape, layout_hd.shape)
     pygame.init()
     size = layout_size * C
     size_factor = 1.6
@@ -501,7 +595,7 @@ if __name__ == "__main__":
             pygame.mouse.set_visible(True)
 
         if shot_state != last_shot_state and shot_state and weapon_state:
-            shots.append(physical_items.projectile(camera.position, camera.direction, 1, 0))
+            shots.append(physical_items.projectile(camera.position, camera.direction, 10, 0))
 
         if not paused:
             dx, dy = pygame.mouse.get_rel()
@@ -520,15 +614,17 @@ if __name__ == "__main__":
 
             camera.move(keys, dx, layout)
 
-            distances, sides = draw_camera(DISPLAY, camera, layout_hd, origin, False)
+            # distances, sides = draw_camera(DISPLAY, camera, layout_hd, origin, False)
 
-            draw_world(DISPLAY, int(size_factor*size), size, camera, distances, sides, DRAW)
-            draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio)
+            # draw_world(DISPLAY, int(size_factor*size), size, camera, distances, sides, DRAW)
+            draw_world_MkII(DISPLAY, camera, int(size_factor*size), size, layout)
+            # draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio)
             draw_layout(DISPLAY, layout, origin, camera, int(size_factor*size), size)
 
             # if len(shots) > 1:
             #     del shots[0]
 
+            collide(shots, layout)
             for i, shot in enumerate(shots):
                 distance, pos = shot.draw(DISPLAY, camera, int(size_factor*size), size, C)
                 if pos[2] > .7:
