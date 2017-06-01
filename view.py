@@ -26,11 +26,20 @@ def draw_layout(DISPLAY, layout, origin, camera, w, h):
 
     # Refreshes screen
     pygame.draw.rect(DISPLAY, WHITE, (origin, 5, C/5*layout.shape[0], C/5*layout.shape[0]))
+
+    cam_Map_x = int(camera.position[0]*C/5 + origin)
+    cam_map_y = int(camera.position[1]*C/5 + 5)
+    ray_length = 80
+
+    line_points = (int(sin(camera.direction[0]+pi/2) * ray_length + cam_Map_x), int(cam_map_y + -cos(camera.direction[0]+pi/2)*ray_length))
+    pygame.draw.line(DISPLAY, (50, 50, 255), (cam_Map_x, cam_map_y), line_points, 2)
     for (x, y), value in np.ndenumerate(layout):
         # Only Draws black rectangles
         if layout[y][x] == 1:
             pygame.draw.rect(DISPLAY, black, (x * C/5 + origin, y*C/5 + 5, C/5, C/5))
-    pygame.draw.circle(DISPLAY, red, (int(camera.position[0]*C/5 + origin), int(camera.position[1]*C/5 + 5)), 5)
+
+    pygame.draw.circle(DISPLAY, red, (cam_Map_x, cam_map_y), 5)
+
 
     # pygame.draw.line(DISPLAY, red, (C/5 * camera.position[0] + origin, C/5 * camera.position[1] + 5), camera.rays[0])
     # pygame.draw.line(DISPLAY, red, (C/5 * camera.position[0] + origin, C/5 * camera.position[1] + 5), camera.rays[1])
@@ -220,40 +229,53 @@ def draw_world(DISPLAY, w, h, camera, distances, sides, DRAW=False):
 
 
 def draw_world_MkII(DISPLAY, camera, w, h, layout):
+    blue = (0, 200, 255)
+    green = (75, 150, 75)
+
+    north = (100, 100, 100)
+    east = (255, 255, 200)
+    south = (100, 100, 200)
+    west = (255, 100, 100)
+    colors = [north, east, south, west]
     points = []
+
+    # wall height
     w_h = 1
     for (x, y), value in np.ndenumerate(layout):
         if value != 0:
+            # highest level organizing list
             highest = []
 
+            # from the layout creates a list of 8 points for each square
+            # jig for creating correct syntax
             jig = [[y, x, w_h/2], [y, x, -w_h/2]]
-            # points.append([y, x, w_h/2])
-            # points.append([y, x, -w_h/2])
             highest.append(jig)
 
-            # points.append([y+1, x, w_h/2])
-            # points.append([y+1, x, -w_h/2])
             jig = [[y+1, x, w_h/2], [y+1, x, -w_h/2]]
             highest.append(jig)
 
-            # points.append([y, x+1, w_h/2])
-            # points.append([y, x+1, -w_h/2])
             jig = [[y, x+1, w_h/2], [y, x+1, -w_h/2]]
             highest.append(jig)
 
-            # points.append([y+1, x+1, w_h/2])
-            # points.append([y+1, x+1, -w_h/2])
             jig = [[y+1, x+1, w_h/2], [y+1, x+1, -w_h/2]]
             highest.append(jig)
 
             points.append(highest)
+
+    pygame.draw.rect(DISPLAY, blue, (0, 0, w, h/2))
+
+    pygame.draw.rect(DISPLAY, green, (0, h/2, w, h/2))
+
+    all_polygons = []
     for cube in points:
+        # appends DRAWN points into pairs denoting uprights of cube (4 in total)
         uprights = []
         for vertical in cube:
             holder = []
             for point in vertical:
                 holder.append(draw(point, DISPLAY, camera, w, h))
             uprights.append(holder)
+
         # North -> 0
         # East  -> 1
         # South -> 2
@@ -263,15 +285,33 @@ def draw_world_MkII(DISPLAY, camera, w, h, layout):
         faces.append([uprights[1], uprights[3]])
         faces.append([uprights[3], uprights[2]])
         faces.append([uprights[2], uprights[0]])
-        for face in faces:
-            for upright_pair in face:
-                for upright in upright_pair:
-                    if upright is not None:
-                        print(upright)
 
+        # Creates list of points for polygon drawing of faces
+        for i, face in enumerate(faces):
+            # trigger for drawing, if no component is None it's drawn
+            # None_bool = False
+            face_points = []
+            for upright_pair in face:
+                for point in upright_pair:
+                    if point is not None:
+                        # appends x, y, and size, as well as index i for face coloring
+                        face_points.append([point, i])
+            # print(face_points)
+            face_points[3], face_points[2] = face_points[2], face_points[3]
+            all_polygons.append(face_points)
+    all_polygons = sorted(all_polygons, key=lambda poly: poly[2])
+    all_polygons = all_polygons[::-1]
+    for polygon in all_polygons:
+        polygon_points = []
+        side = polygon[0][1]
+        for point in polygon:
+            polygon_points.append((point[0][0], point[0][1]))
+        # print(polygon_points, side)
+        if side < 2:
+            pygame.draw.polygon(DISPLAY, colors[side], polygon_points)
         # print(faces)
 
-    DISPLAY.fill((20, 20, 20))
+    #
 
     # for position in positions:
         # pygame.draw.circle(DISPLAY, (255, 255, 0), (position[0], position[1]), position[2])
@@ -304,17 +344,28 @@ def draw(position, DISPLAY, camera, w, h):
     angle_xy = pi * 2 - angle_xy
     # angle_xy = round(2, angle_xy - camera.direction[0])
     angle_difference_xy = angle_xy - camera.direction[0]
+    if angle_difference_xy > 2*pi - camera.FOV:
+        angle_difference_xy -= 2*pi
+    if angle_difference_xy < -(2*pi - camera.FOV):
+        angle_difference_xy += 2*pi
     distance += .001
     angle_difference_z = atan(position[2]/distance)
     H_FOV = camera.FOV / 2
 
-    if abs(angle_difference_xy) < H_FOV:
-        x_drawn = ((angle_difference_xy / H_FOV) + 1) * (w/2)
-        y_drawn = ((angle_difference_z / H_FOV) + 1) * (h/2)
-        r = int(5 / ((distance/5) + 1))
-        return [int(x_drawn), int(y_drawn), r]
-    else:
-        return None
+    x_drawn = ((angle_difference_xy / H_FOV) + 1) * (w/2)
+    y_drawn = ((angle_difference_z / H_FOV) + 1) * (h/2)
+    r = int(5 / ((distance/5) + 1))
+    return [int(x_drawn), int(y_drawn), r]
+
+
+    # RETURNS NONE IF BLOCK IS NOT IN SIGHT
+    # if abs(angle_difference_xy) < H_FOV:
+    #     x_drawn = ((angle_difference_xy / H_FOV) + 1) * (w/2)
+    #     y_drawn = ((angle_difference_z / H_FOV) + 1) * (h/2)
+    #     r = int(5 / ((distance/5) + 1))
+    #     return [int(x_drawn), int(y_drawn), r]
+    # else:
+    #     return None
         # image = pygame.transform.scale(image, (r, r))
         # pygame.draw.circle(DISPLAY, (255, 255, 0), (int(x_drawn), int(y_drawn)), r)
         # DISPLAY.blit(image, (int(x_drawn - r/2), int(y_drawn - r/2)))
@@ -649,7 +700,7 @@ if __name__ == "__main__":
 
             # draw_world(DISPLAY, int(size_factor*size), size, camera, distances, sides, DRAW)
             draw_world_MkII(DISPLAY, camera, int(size_factor*size), size, layout)
-            # draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio)
+            draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio)
             draw_layout(DISPLAY, layout, origin, camera, int(size_factor*size), size)
 
             # if len(shots) > 1:
