@@ -299,15 +299,17 @@ def draw_world_MkII(DISPLAY, camera, w, h, layout):
             # print(face_points)
             face_points[3], face_points[2] = face_points[2], face_points[3]
             all_polygons.append(face_points)
-    all_polygons = sorted(all_polygons, key=lambda poly: poly[2])
+    all_polygons = sorted(all_polygons, key=lambda poly: (poly[0][0][2] + poly[2][0][2]))
     all_polygons = all_polygons[::-1]
     for polygon in all_polygons:
         polygon_points = []
         side = polygon[0][1]
+        all_negative = True
         for point in polygon:
+            if point[0][0] > 0:
+                all_negative = False
             polygon_points.append((point[0][0], point[0][1]))
-        # print(polygon_points, side)
-        if side < 2:
+        if abs(polygon_points[1][0] - polygon_points[2][0]) < w*3 and all_negative is False:
             pygame.draw.polygon(DISPLAY, colors[side], polygon_points)
         # print(faces)
 
@@ -355,7 +357,7 @@ def draw(position, DISPLAY, camera, w, h):
     x_drawn = ((angle_difference_xy / H_FOV) + 1) * (w/2)
     y_drawn = ((angle_difference_z / H_FOV) + 1) * (h/2)
     r = int(5 / ((distance/5) + 1))
-    return [int(x_drawn), int(y_drawn), r]
+    return [int(x_drawn), int(y_drawn), distance]
 
 
     # RETURNS NONE IF BLOCK IS NOT IN SIGHT
