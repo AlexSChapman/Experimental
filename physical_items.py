@@ -95,7 +95,7 @@ class projectile():
             y_drawn = ((angle_difference_z / H_FOV) + 1) * (h/2)
             r = int(30 / ((distance/5) + 1))
             # self.image = pygame.transform.scale(self.image, (r, r))
-            pygame.draw.circle(DISPLAY, (255, 255, 0), (int(x_drawn), int(y_drawn)), r)
+            pygame.draw.circle(DISPLAY, (100, 255, 0), (int(x_drawn), int(y_drawn)), r)
             # DISPLAY.blit(self.image, (int(x_drawn - r/2), int(y_drawn - r/2)))
 
         # print(round(2, self.position), round(2, camera.position), round(2, self.direction), round(2, camera.direction[0]), round(2, angle_difference_xy), to_draw, end='\r')

@@ -88,6 +88,7 @@ class player():
                 if layout[future_pos_y][int(self.position[0])] == 0:
                     self.position[1] += .6 * -speed * math.sin(-(self.direction[0] - (math.pi / 2)))
 
-        self.direction[0] += dx / 200
-        self.update_rays()
+        if dx / 200 < math.pi / 5:
+            self.direction[0] += dx / 200
+        # self.update_rays()
         self.limit_rotation()

@@ -722,7 +722,7 @@ if __name__ == "__main__":
             DISPLAY.blit(label, (10, 10))
         else:
 
-            draw_world(DISPLAY, int(size_factor*size), size, camera, distances, sides, DRAW)
+            draw_world_MkII(DISPLAY, camera, int(size_factor*size), size, layout)
             draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio)
             draw_layout(DISPLAY, layout, origin, camera, int(size_factor*size), size)
 
