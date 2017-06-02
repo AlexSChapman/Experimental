@@ -313,12 +313,6 @@ def draw_world_MkII(DISPLAY, camera, w, h, layout):
             polygon_points.append((point[0][0], point[0][1]))
         if abs(polygon_points[1][0] - polygon_points[2][0]) < w*3 and all_negative is False:
             pygame.draw.polygon(DISPLAY, colors[side], polygon_points)
-        # print(faces)
-
-    #
-
-    # for position in positions:
-        # pygame.draw.circle(DISPLAY, (255, 255, 0), (position[0], position[1]), position[2])
 
 
 def draw(position, camera, w, h):
@@ -327,9 +321,8 @@ def draw(position, camera, w, h):
     for i, dif in enumerate(differences):
         distance += dif**2
         if dif == 0:
-            differences[i] = .0001
+            differences[i] = .01
     # to_draw = []
-
     if differences[0] > 0:
         if differences[1] > 0:
             # IV: atan is positive in this quad as differences[1] is positive here
@@ -628,6 +621,7 @@ def collide(shots, layout):
             del shots[i]
             collisions.append(shot.position)
     return collisions
+
 
 
 if __name__ == "__main__":

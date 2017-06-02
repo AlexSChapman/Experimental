@@ -31,6 +31,10 @@ class player():
 
     def limit_rotation(self):
         self.direction[0] = self.direction[0] % (math.pi * 2)
+        if self.direction[1] > self.FOV/2:
+            self.direction[1] = self.FOV/2
+        elif self.direction[1] < -self.FOV/2:
+            self.direction[1] = -self.FOV/ 2
 
     def move(self, input_keys, dx, dy, layout):
         dimensions = layout.shape

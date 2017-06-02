@@ -9,8 +9,8 @@ class projectile():
     def __init__(self, position, direction, velocity, ammo_type):
         # print('projectile_created')
         self.position = [0, 0, 0]
-        self.position[0] = position[0] + math.cos(direction[0]) * .1
-        self.position[1] = position[1] + math.sin(direction[0]) * .1
+        self.position[0] = position[0] + math.cos(direction[0]) * math.sin(direction[1])
+        self.position[1] = position[1] + math.sin(direction[0]) * math.sin(direction[1])
         self.position[2] = position[2] + math.sin(direction[1]) * .1
 
         self.direction = list(direction)
