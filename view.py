@@ -8,6 +8,7 @@ import operator
 
 C = 50
 WALL_HEIGHT = 30
+W_H = .75
 
 
 def draw_layout(DISPLAY, layout, origin, camera, w, h):
@@ -230,7 +231,7 @@ def draw_world(DISPLAY, w, h, camera, distances, sides, DRAW=False):
 
 def draw_world_MkII(DISPLAY, camera, w, h, layout):
     blue = (0, 200, 255)
-    green = (75, 150, 75)
+    green = (60,200,113)
 
     north = (100, 100, 100)
     east = (255, 255, 200)
@@ -240,7 +241,6 @@ def draw_world_MkII(DISPLAY, camera, w, h, layout):
     points = []
 
     # wall height
-    w_h = 1
     for (x, y), value in np.ndenumerate(layout):
         if value != 0:
             # highest level organizing list
@@ -248,23 +248,25 @@ def draw_world_MkII(DISPLAY, camera, w, h, layout):
 
             # from the layout creates a list of 8 points for each square
             # jig for creating correct syntax
-            jig = [[y, x, w_h], [y, x, 0]]
+            jig = [[y, x, W_H], [y, x, 0]]
             highest.append(jig)
 
-            jig = [[y+1, x, w_h], [y+1, x, 0]]
+            jig = [[y+1, x, W_H], [y+1, x, 0]]
             highest.append(jig)
 
-            jig = [[y, x+1, w_h], [y, x+1, 0]]
+            jig = [[y, x+1, W_H], [y, x+1, 0]]
             highest.append(jig)
 
-            jig = [[y+1, x+1, w_h], [y+1, x+1, 0]]
+            jig = [[y+1, x+1, W_H], [y+1, x+1, 0]]
             highest.append(jig)
 
             points.append(highest)
 
-    pygame.draw.rect(DISPLAY, blue, (0, 0, w, h/2))
+    result = draw([100, 100, 0], camera, w, h)
 
-    pygame.draw.rect(DISPLAY, green, (0, h/2, w, h/2))
+    pygame.draw.rect(DISPLAY, blue, (0, 0, w, result[1]))
+
+    pygame.draw.rect(DISPLAY, green, (0, result[1], w, h - result[1]))
 
     all_polygons = []
     for cube in points:
@@ -273,7 +275,7 @@ def draw_world_MkII(DISPLAY, camera, w, h, layout):
         for vertical in cube:
             holder = []
             for point in vertical:
-                holder.append(draw(point, DISPLAY, camera, w, h))
+                holder.append(draw(point, camera, w, h))
             uprights.append(holder)
 
         # North -> 0
@@ -319,15 +321,14 @@ def draw_world_MkII(DISPLAY, camera, w, h, layout):
         # pygame.draw.circle(DISPLAY, (255, 255, 0), (position[0], position[1]), position[2])
 
 
-def draw(position, DISPLAY, camera, w, h):
+def draw(position, camera, w, h):
     differences = list(map(operator.sub, position, camera.position))
-    # to_draw = []
     distance = 0
     for i, dif in enumerate(differences):
         distance += dif**2
         if dif == 0:
             differences[i] = .0001
-    distance = distance**.5
+    # to_draw = []
 
     if differences[0] > 0:
         if differences[1] > 0:
@@ -350,13 +351,15 @@ def draw(position, DISPLAY, camera, w, h):
         angle_difference_xy -= 2*pi
     if angle_difference_xy < -(2*pi - camera.FOV):
         angle_difference_xy += 2*pi
-    distance += .001
-    angle_difference_z = camera.direction[1] - atan(differences[2]/distance)
+
+    distance = distance**.5
+    xy_dist = (differences[0]**2 + differences[1]**2)**.5
+
+    angle_difference_z = camera.direction[1] - atan(differences[2]/xy_dist)
     H_FOV = camera.FOV / 2
 
     x_drawn = ((angle_difference_xy / H_FOV) + 1) * (w/2)
     y_drawn = ((angle_difference_z / H_FOV) + 1) * (h/2)
-    r = int(5 / ((distance/5) + 1))
     return [int(x_drawn), int(y_drawn), distance]
 
 
@@ -541,16 +544,17 @@ def find_walls(distances, sides):
     return walls
 
 
-def draw_HUD(DISPLAY, weapons, weapon_state, iteration, w, h, ratio):
+def draw_HUD(DISPLAY, weapons, weapon_state, iteration, w, h, ratio, camera):
     index = int(iteration/ratio)
     if index > len(weapons)-1:
         index = len(weapons)-1
     elif index < 0:
         index = 0
     i_w, i_h = weapons[0].get_rect().size
-    image_to_use = weapons[index]
 
-    DISPLAY.blit(image_to_use, (int((w-i_w)/2)-30, 440))
+    image_to_use = weapons[index]
+    camera.FOV = camera.original_FOV - index*.05
+    DISPLAY.blit(image_to_use, (int((w-i_w)/2)-30, 485))
 
 
 def load_images():
@@ -586,7 +590,7 @@ def get_input(clicked_state, shot_state):
     keys = pygame.key.get_pressed()
     keys_down = [idx for idx, val in enumerate(keys) if val == 1]
     # The event values representing the keys pressed
-    event_keys = (pygame.K_w, pygame.K_s, pygame.K_d, pygame.K_a, pygame.K_ESCAPE)
+    event_keys = (pygame.K_w, pygame.K_s, pygame.K_d, pygame.K_a, pygame.K_ESCAPE, pygame.K_SPACE)
     # Convert the list of pressed keys to a list of each relevant key's state
     key_states = [int(key in keys_down) for key in event_keys]
     return key_states, clicked_state, shot_state
@@ -617,7 +621,7 @@ def collide(shots, layout):
     collisions = []
     for i, shot in enumerate(shots):
         try:
-            if layout[int(shot.position[1])][int(shot.position[0])] != 0:
+            if layout[int(shot.position[1])][int(shot.position[0])] != 0 and shot.position[2] < W_H:
                 del shots[i]
                 collisions.append(shot.position)
         except:
@@ -628,14 +632,14 @@ def collide(shots, layout):
 
 if __name__ == "__main__":
     DRAW = False
-    layout_size = 20
+    layout_size = 22
     wrld = world.world(layout_size)
 
     layout = wrld.map
     camera = wrld.cam
 
     layout_hd = get_large_layout(layout)
-    print(layout.shape, layout_hd.shape)
+    # print(layout.shape, layout_hd.shape)
     pygame.init()
     size = layout_size * C
     size_factor = 1.6
@@ -679,7 +683,7 @@ if __name__ == "__main__":
             pygame.mouse.set_visible(True)
 
         if shot_state != last_shot_state and shot_state and weapon_state:
-            shots.append(physical_items.projectile(camera.position, camera.direction, 5, 0))
+            shots.append(physical_items.projectile(camera.position, camera.direction, 10, 0))
 
         if not paused:
             dx, dy = pygame.mouse.get_rel()
@@ -696,13 +700,13 @@ if __name__ == "__main__":
             else:
                 animation_iteration -= 1
 
-            camera.move(keys, dx, layout)
+            camera.move(keys, dx, dy, layout)
 
             # distances, sides = draw_camera(DISPLAY, camera, layout_hd, origin, False)
 
             # draw_world(DISPLAY, int(size_factor*size), size, camera, distances, sides, DRAW)
             draw_world_MkII(DISPLAY, camera, int(size_factor*size), size, layout)
-            draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio)
+            draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio, camera)
             draw_layout(DISPLAY, layout, origin, camera, int(size_factor*size), size)
 
             # if len(shots) > 1:
@@ -723,7 +727,7 @@ if __name__ == "__main__":
         else:
 
             draw_world_MkII(DISPLAY, camera, int(size_factor*size), size, layout)
-            draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio)
+            draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio, camera)
             draw_layout(DISPLAY, layout, origin, camera, int(size_factor*size), size)
 
             pygame.event.set_grab(False)

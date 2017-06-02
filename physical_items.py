@@ -9,19 +9,19 @@ class projectile():
     def __init__(self, position, direction, velocity, ammo_type):
         # print('projectile_created')
         self.position = [0, 0, 0]
-        self.position[0] = position[0] + math.cos(direction[0]) * .5
-        self.position[1] = position[1] + math.sin(direction[0]) * .5
-        self.position[2] = position[2]
+        self.position[0] = position[0] + math.cos(direction[0]) * .1
+        self.position[1] = position[1] + math.sin(direction[0]) * .1
+        self.position[2] = position[2] + math.sin(direction[1]) * .1
 
         self.direction = list(direction)
 
-        self.velocity = []
-        self.velocity.append(velocity)
-        self.velocity.append(0)
+        self.velocity = [0, 0]
+        self.velocity[0] = velocity
+        self.velocity[1] = math.sin(direction[1]) * velocity
 
         self.type = ammo_type
 
-        self.acceleration = -0.05
+        self.acceleration = -0.3
         self.time = time.clock()
 
         if self.type == 0:
@@ -52,65 +52,12 @@ class projectile():
 
     def draw(self, DISPLAY, camera, w, h, C):
         self.update_physics()
-        drawn_x, drawn_y, distance = view.draw(self.position, DISPLAY, camera, w, h)
+        drawn_x, drawn_y, distance = view.draw(self.position, camera, w, h)
 
         r = int(30 / ((distance/5) + 1))
         # self.image = pygame.transform.scale(self.image, (r, r))
         pygame.draw.circle(DISPLAY, (100, 255, 0), (drawn_x, drawn_y), r)
 
-        return distance, self.position
-
-        differences = list(map(operator.sub, self.position, camera.position))
-        # to_draw = []
-        distance = 0
-        for i, dif in enumerate(differences):
-            # to_draw.append(round(2, dif))
-
-            # dif = dif * C
-            distance += dif**2
-
-            if dif == 0:
-                differences[i] = .0001
-
-        distance = distance**.5
-
-        # xy_angle = (math.atan(-differences[1] / differences[0]) % (math.pi * 2))
-        if differences[0] > 0:
-            if differences[1] > 0:
-                # print('IV     ', end='\r')
-                # IV: atan is positive in this quad as differences[1] is positive here
-                angle_xy = (math.pi * 2) - math.atan(differences[1] / differences[0])
-            else:
-                # print('I     ', end='\r')
-                # I: atan is negative in this quad, as differences[1] is neg here
-                angle_xy = -1 * math.atan(differences[1] / differences[0])
-        else:
-            if differences[1] > 0:
-                # print('III     ', end='\r')
-                # III: atan is negative here, and thus needs to be inverted to add onto pi
-                angle_xy = math.pi - math.atan(differences[1] / differences[0])
-            else:
-                # print('II     ', end='\r')
-                # II: atan is positive here
-                angle_xy = math.pi - math.atan(differences[1] / differences[0])
-        angle_xy = math.pi * 2 - angle_xy
-        # angle_xy = round(2, angle_xy - camera.direction[0])
-        angle_difference_xy = angle_xy - camera.direction[0]
-        angle_difference_z = math.atan(self.position[2]/distance)
-        H_FOV = camera.FOV / 2
-
-        if abs(angle_difference_xy) < H_FOV:
-            x_drawn = ((angle_difference_xy / H_FOV) + 1) * (w/2)
-            y_drawn = ((angle_difference_z / H_FOV) + 1) * (h/2)
-            r = int(30 / ((distance/5) + 1))
-            # self.image = pygame.transform.scale(self.image, (r, r))
-            pygame.draw.circle(DISPLAY, (100, 255, 0), (int(x_drawn), int(y_drawn)), r)
-            # DISPLAY.blit(self.image, (int(x_drawn - r/2), int(y_drawn - r/2)))
-
-        # print(round(2, self.position), round(2, camera.position), round(2, self.direction), round(2, camera.direction[0]), round(2, angle_difference_xy), to_draw, end='\r')
-
-        # pygame.draw.rect(DISPLAY, (255, 255, 0), (int(x_drawn_pos), int(y_drawn_pos), 5, 5))
-        print(round(2, camera.position), end='\r')
         return distance, self.position
 
 

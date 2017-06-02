@@ -2,6 +2,7 @@ import numpy as np
 import camera
 import math
 
+
 class world():
     def __init__(self, size):
         max = 4
@@ -16,6 +17,13 @@ class world():
         for i in range(start_box_size):
             for o in range(start_box_size):
                 self.map[int(size/2 - start_box_size/2 + i)][int(size/2 - start_box_size/2 + o)] = 0
+
+        for i in range(size):
+            self.map[0][i] = 1
+            self.map[i][0] = 1
+
+            self.map[size-1][i] = 1
+            self.map[i][size-1] = 1
         # print(self.map)
 
         # positive angle increase is clockwise
