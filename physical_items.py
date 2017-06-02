@@ -70,3 +70,46 @@ def round(number_of_zeros, num):
     else:
         factor = 10**number_of_zeros
         return int(num * factor) / factor
+
+
+class zombie():
+    def __init__(self, position, mob_type):
+        self.health = 100
+
+        zero = (170, 187, 36)
+        one = (190, 207, 56)
+        two = (180, 197, 46)
+        three = (200, 217, 66)
+        self.colors = [zero, one, two, three]
+
+        self.w = .2
+        self.h = .75
+        self.position = list(position)
+        self.position[0] += .5
+        self.position[1] += .5
+
+        self.uprights = []
+        self.uprights.append([[position[1]+(1-self.w)/2, position[0]+(1-self.w)/2, self.h], [position[1]+(1-self.w)/2, position[0]+(1-self.w)/2, 0]])
+
+        self.uprights.append([[position[1]+(1-self.w)/2+self.w, position[0]+(1-self.w)/2, self.h], [position[1]+(1-self.w)/2+self.w, position[0]+(1-self.w)/2, 0]])
+
+        self.uprights.append([[position[1]+(1-self.w)/2, position[0]+(1-self.w)/2+self.w, self.h], [position[1]+(1-self.w)/2, position[0]+(1-self.w)/2+self.w, 0]])
+
+        self.uprights.append([[position[1]+(1-self.w)/2+self.w, position[0]+(1-self.w)/2+self.w, self.h], [position[1]+(1-self.w)/2+self.w, position[0]+(1-self.w)/2+self.w, 0]])
+
+    def draw(self, DISPLAY, camera, w, h):
+        self.faces = []
+
+        verticals = []
+        for upright in self.uprights:
+            holder = []
+            for point in upright:
+                holder.append(view.draw(point, camera, w, h))
+            verticals.append(holder)
+
+        self.faces.append([verticals[0], verticals[1]])
+        self.faces.append([verticals[1], verticals[3]])
+        self.faces.append([verticals[3], verticals[2]])
+        self.faces.append([verticals[2], verticals[0]])
+
+        self.faces.append([[verticals[0][0], verticals[1][0]], [verticals[2][0], verticals[3][0]]])
