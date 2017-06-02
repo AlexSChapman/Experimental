@@ -2,6 +2,7 @@ import time
 import pygame
 import operator
 import math
+import view
 
 
 class projectile():
@@ -20,7 +21,7 @@ class projectile():
 
         self.type = ammo_type
 
-        self.acceleration = 0.05
+        self.acceleration = -0.05
         self.time = time.clock()
 
         if self.type == 0:
@@ -51,6 +52,14 @@ class projectile():
 
     def draw(self, DISPLAY, camera, w, h, C):
         self.update_physics()
+        drawn_x, drawn_y, distance = view.draw(self.position, DISPLAY, camera, w, h)
+
+        r = int(30 / ((distance/5) + 1))
+        # self.image = pygame.transform.scale(self.image, (r, r))
+        pygame.draw.circle(DISPLAY, (100, 255, 0), (drawn_x, drawn_y), r)
+
+        return distance, self.position
+
         differences = list(map(operator.sub, self.position, camera.position))
         # to_draw = []
         distance = 0

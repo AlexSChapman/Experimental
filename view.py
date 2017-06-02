@@ -248,16 +248,16 @@ def draw_world_MkII(DISPLAY, camera, w, h, layout):
 
             # from the layout creates a list of 8 points for each square
             # jig for creating correct syntax
-            jig = [[y, x, w_h/2], [y, x, -w_h/2]]
+            jig = [[y, x, w_h], [y, x, 0]]
             highest.append(jig)
 
-            jig = [[y+1, x, w_h/2], [y+1, x, -w_h/2]]
+            jig = [[y+1, x, w_h], [y+1, x, 0]]
             highest.append(jig)
 
-            jig = [[y, x+1, w_h/2], [y, x+1, -w_h/2]]
+            jig = [[y, x+1, w_h], [y, x+1, 0]]
             highest.append(jig)
 
-            jig = [[y+1, x+1, w_h/2], [y+1, x+1, -w_h/2]]
+            jig = [[y+1, x+1, w_h], [y+1, x+1, 0]]
             highest.append(jig)
 
             points.append(highest)
@@ -351,7 +351,7 @@ def draw(position, DISPLAY, camera, w, h):
     if angle_difference_xy < -(2*pi - camera.FOV):
         angle_difference_xy += 2*pi
     distance += .001
-    angle_difference_z = atan(position[2]/distance)
+    angle_difference_z = camera.direction[1] - atan(differences[2]/distance)
     H_FOV = camera.FOV / 2
 
     x_drawn = ((angle_difference_xy / H_FOV) + 1) * (w/2)
@@ -679,7 +679,7 @@ if __name__ == "__main__":
             pygame.mouse.set_visible(True)
 
         if shot_state != last_shot_state and shot_state and weapon_state:
-            shots.append(physical_items.projectile(camera.position, camera.direction, 10, 0))
+            shots.append(physical_items.projectile(camera.position, camera.direction, 5, 0))
 
         if not paused:
             dx, dy = pygame.mouse.get_rel()
@@ -711,7 +711,7 @@ if __name__ == "__main__":
             collide(shots, layout)
             for i, shot in enumerate(shots):
                 distance, pos = shot.draw(DISPLAY, camera, int(size_factor*size), size, C)
-                if pos[2] > .7:
+                if pos[2] <= 0:
                     del shots[i]
                 # if shot.draw(DISPLAY, camera, int(size_factor*size), size, C) > 10:
                 #    del shots[i]

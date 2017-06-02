@@ -19,7 +19,7 @@ class world():
         # print(self.map)
 
         # positive angle increase is clockwise
-        self.cam = camera.player([int(size / 2), int(size/2), 0], [math.pi/2, 0], math.pi/3)
+        self.cam = camera.player([int(size / 2), int(size/2), .5], [math.pi/2, 0], math.pi/3)
 
 
 if __name__ == "__main__":
