@@ -6,7 +6,7 @@ import view
 
 
 class projectile():
-    def __init__(self, position, direction, velocity, ammo_type):
+    def __init__(self, position, direction, velocity, ammo_type, images):
         # print('projectile_created')
         self.position = [0, 0, 0]
         self.position[0] = position[0] + math.cos(direction[0]) * math.sin(direction[1])
@@ -24,12 +24,10 @@ class projectile():
         self.acceleration = -0.3
         self.time = time.clock()
 
-        if self.type == 0:
-            self.image = pygame.image.load("resources/projectiles/0.png")  # Load image
-            self.image = pygame.transform.scale(self.image, (30, 30))
-        else:
-            self.image = pygame.image.load("resources/projectiles/1.png")  # Load image
-        # print(self)
+        self.images = list(images)
+        self.image = self.images[0]
+
+        #     self.image = pygame.transform.scale(self.image, (30, 30))
 
     def __str__(self):
         to_return = str(round(2, self.position)) + ', ' + str(round(2, self.direction)) + ', ' + str(round(2, self.velocity))
@@ -54,9 +52,11 @@ class projectile():
         self.update_physics()
         drawn_x, drawn_y, distance = view.draw(self.position, camera, w, h)
 
-        r = int(30 / ((distance/5) + 1))
+        r = int(100 / ((distance/5) + 1))
         # self.image = pygame.transform.scale(self.image, (r, r))
-        pygame.draw.circle(DISPLAY, (100, 255, 0), (drawn_x, drawn_y), r)
+        # self.image = pygame.transform.rotozoom(self.image, 0, .9)
+        # pygame.draw.circle(DISPLAY, (100, 255, 0), (drawn_x, drawn_y), r)
+        DISPLAY.blit(self.image, (drawn_x, drawn_y))
 
         return distance, self.position
 

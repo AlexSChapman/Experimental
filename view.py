@@ -537,28 +537,72 @@ def find_walls(distances, sides):
     return walls
 
 
-def draw_HUD(DISPLAY, weapons, weapon_state, iteration, w, h, ratio, camera):
-    index = int(iteration/ratio)
-    if index > len(weapons)-1:
-        index = len(weapons)-1
+def draw_HUD(DISPLAY, reticles, hands, dodgeballs, weapon_state, iteration, w, h, ratio, camera):
+    index = iteration/ratio
+    if index > len(reticles)-1:
+        index = len(reticles)-1
     elif index < 0:
         index = 0
-    i_w, i_h = weapons[0].get_rect().size
+    hold = index
+    index = int(index)
+    i_w, i_h = reticles[0].get_rect().size
 
-    image_to_use = weapons[index]
-    camera.FOV = camera.original_FOV - index*.05
-    DISPLAY.blit(image_to_use, (int((w-i_w)/2)-30, 485))
+    image_to_use = reticles[index]
+    camera.FOV = camera.original_FOV - hold*.02
+    DISPLAY.blit(image_to_use, (20, 200))
+
+    # Dodgeball Placeholders
+    DISPLAY.blit(dodgeballs[0], (920 + int(hold*25), 575 - int(hold*25)))
+    # Hands
+    DISPLAY.blit(hands[0], (250, 600 + int(hold*25)))
+    DISPLAY.blit(hands[3], (950 + int(hold*25), 600 - int(hold*25)))
 
 
 def load_images():
-    weapon = []
-    weapon.append(pygame.image.load("resources/0.png"))  # Load image
-    weapon.append(pygame.image.load("resources/1.png"))  # Load image
-    weapon.append(pygame.image.load("resources/2.png"))  # Load image
-    weapon.append(pygame.image.load("resources/3.png"))  # Load image
-    weapon.append(pygame.image.load("resources/4.png"))  # Load image
-    weapon.append(pygame.image.load("resources/5.png"))  # Load image
-    return weapon
+    hands = []
+    hands.append(pygame.image.load("resources/Hand_Bunched_L.png"))  # Load image
+    hands.append(pygame.image.load("resources/Hand_Spread_L.png"))  # Load image
+    hands.append(pygame.image.load("resources/Hand_Bunched.png"))  # Load image
+    hands.append(pygame.image.load("resources/Hand_Spread.png"))  # Load image
+    for i, hand in enumerate(hands):
+        hands[i] = pygame.transform.rotozoom(hand, 0, .6)
+
+    reticles = []
+    reticles.append(pygame.image.load("resources/Reticle/0.png"))
+    reticles.append(pygame.image.load("resources/Reticle/1.png"))
+    reticles.append(pygame.image.load("resources/Reticle/2.png"))
+    reticles.append(pygame.image.load("resources/Reticle/3.png"))
+    reticles.append(pygame.image.load("resources/Reticle/4.png"))
+    reticles.append(pygame.image.load("resources/Reticle/5.png"))
+
+    charges = []
+    charges.append(pygame.image.load("resources/charge/0.png"))
+    charges.append(pygame.image.load("resources/charge/1.png"))
+    charges.append(pygame.image.load("resources/charge/2.png"))
+    charges.append(pygame.image.load("resources/charge/3.png"))
+    charges.append(pygame.image.load("resources/charge/4.png"))
+    charges.append(pygame.image.load("resources/charge/5.png"))
+    charges.append(pygame.image.load("resources/charge/6.png"))
+    charges.append(pygame.image.load("resources/charge/7.png"))
+    charges.append(pygame.image.load("resources/charge/8.png"))
+    charges.append(pygame.image.load("resources/charge/9.png"))
+
+    dodgeballs = []
+    dodgeballs.append(pygame.image.load("resources/Projectiles/0/0.png"))
+    dodgeballs.append(pygame.image.load("resources/Projectiles/0/1.png"))
+    dodgeballs.append(pygame.image.load("resources/Projectiles/0/2.png"))
+    dodgeballs.append(pygame.image.load("resources/Projectiles/0/3.png"))
+    dodgeballs.append(pygame.image.load("resources/Projectiles/0/4.png"))
+    dodgeballs.append(pygame.image.load("resources/Projectiles/0/5.png"))
+    dodgeballs.append(pygame.image.load("resources/Projectiles/0/6.png"))
+    dodgeballs.append(pygame.image.load("resources/Projectiles/0/7.png"))
+    dodgeballs.append(pygame.image.load("resources/Projectiles/0/8.png"))
+    dodgeballs.append(pygame.image.load("resources/Projectiles/0/9.png"))
+    dodgeballs.append(pygame.image.load("resources/Projectiles/0/10.png"))
+    for i, dodgeball in enumerate(dodgeballs):
+        dodgeballs[i] = pygame.transform.rotozoom(dodgeball, 0, 5)
+
+    return hands, reticles, charges, dodgeballs
 
 
 def get_large_layout(layout):
@@ -623,7 +667,6 @@ def collide(shots, layout):
     return collisions
 
 
-
 if __name__ == "__main__":
     DRAW = False
     layout_size = 22
@@ -641,11 +684,11 @@ if __name__ == "__main__":
 
     clock = pygame.time.Clock()
 
-    weapons = load_images()
+    hands, reticles, charges, dodgeballs = load_images()
     weapon_state = False
     last_weapon_state = False
     animation_iteration = 0
-    ratio = 1.5
+    ratio = 3
 
     shot_state = False
     last_shot_state = False
@@ -677,7 +720,7 @@ if __name__ == "__main__":
             pygame.mouse.set_visible(True)
 
         if shot_state != last_shot_state and shot_state and weapon_state:
-            shots.append(physical_items.projectile(camera.position, camera.direction, 10, 0))
+            shots.append(physical_items.projectile(camera.position, camera.direction, 10, 0, dodgeballs))
 
         if not paused:
             dx, dy = pygame.mouse.get_rel()
@@ -687,8 +730,6 @@ if __name__ == "__main__":
             if weapon_state != last_weapon_state:
                 if weapon_state:
                     animation_iteration = 0
-                else:
-                    animation_iteration = (len(weapons)-1) * ratio
             if weapon_state:
                 animation_iteration += 1
             else:
@@ -700,7 +741,7 @@ if __name__ == "__main__":
 
             # draw_world(DISPLAY, int(size_factor*size), size, camera, distances, sides, DRAW)
             draw_world_MkII(DISPLAY, camera, int(size_factor*size), size, layout)
-            draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio, camera)
+            draw_HUD(DISPLAY, charges, hands, dodgeballs, weapon_state, animation_iteration, int(size_factor*size), size, ratio, camera)
             draw_layout(DISPLAY, layout, origin, camera, int(size_factor*size), size)
 
             # if len(shots) > 1:
@@ -721,7 +762,7 @@ if __name__ == "__main__":
         else:
 
             draw_world_MkII(DISPLAY, camera, int(size_factor*size), size, layout)
-            draw_HUD(DISPLAY, weapons, weapon_state, animation_iteration, int(size_factor*size), size, ratio, camera)
+            draw_HUD(DISPLAY, charges, weapon_state, animation_iteration, int(size_factor*size), size, ratio, camera)
             draw_layout(DISPLAY, layout, origin, camera, int(size_factor*size), size)
 
             pygame.event.set_grab(False)
